@@ -1,0 +1,19 @@
+{
+  "name": "tahamed/laravel-isr",
+  "version": "0.0.1",
+  "description": "A Laravel package for caching data.",
+  "keywords": [
+    "laravel",
+    "cache",
+    "data"
+  ],
+  "require": {
+    "php": ">=7.4",
+    "laravel/framework": ">=9.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Tahamed\\LaravelIsr\\": "src/"
+    }
+  }
+}
