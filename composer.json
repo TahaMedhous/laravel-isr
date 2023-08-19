@@ -1,6 +1,6 @@
 {
   "name": "tahamed/laravel-isr",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "A Laravel package for caching data.",
   "keywords": [
     "laravel",
