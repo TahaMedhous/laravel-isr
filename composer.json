@@ -15,5 +15,6 @@
     "psr-4": {
       "Tahamed\\LaravelIsr\\": "src/"
     }
-  }
+  },
+  "license": "MIT"
 }

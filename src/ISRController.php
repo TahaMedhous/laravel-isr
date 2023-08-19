@@ -4,58 +4,82 @@ namespace Tahamed\LaravelIsr;
 
 use Illuminate\Support\Facades\Cache;
 
-
 class ISRController
 {
-    public function GetData(int $id, callable $dataCallback, int $duration, string $view, string $customDataName = null)
+    /**
+     * Get data and render the specified view with cached data if available.
+     *
+     * @param string   $param
+     * @param callable $dataCallback The callback function to retrieve data.
+     * @param int      $duration      Cache duration in seconds.
+     * @param string   $view          The view to render.
+     * @param string   $customDataName Custom name for data passed to the view.
+     * @return \Illuminate\Contracts\View\View
+     */
+    public function getData(string $param, callable $dataCallback, int $duration, string $view, string $customDataName)
     {
-        $cacheKey = 'data_' . $id;
-        $cachedData = Cache::get($cacheKey) ?? [];
+        if (!$this->argsValid($param, $dataCallback, $duration, $view, $customDataName)) {
+            throw new \InvalidArgumentException('Invalid arguments passed to getData() method.');
+        }
+        $cacheKey = 'data_' . $param;
+        $cachedData = Cache::get($cacheKey, []);
         $pageData = $cachedData['data'] ?? null;
         $timestamp = $cachedData['timestamp'] ?? null;
         $currentTime = time();
 
         if ($pageData === null && $timestamp === null) {
-            $pageData = call_user_func($dataCallback, $id);
+            // if data is not cached, page was never generated before, generate it now.
+            $pageData = call_user_func($dataCallback, $param);
 
             if (!empty($pageData)) {
-                $cachedData = ['data' => $pageData, 'timestamp' => $currentTime];
-                Cache::put($cacheKey, $cachedData, $duration);
+                $this->storeInCache($cacheKey, $pageData, $currentTime, $duration);
             } else {
                 return view('404');
             }
         } elseif ($pageData && ($currentTime - $timestamp) >= $duration) {
-            $newPageData = call_user_func($dataCallback, $id);
+            // if data is cached but expired, fetch new data, store it in cache and render the view.
+            $newPageData = call_user_func($dataCallback, $param);
 
             if (empty($newPageData)) {
-                // the page doesn't exist anymore, so we'll delete the cached data
+                // if new data is empty (page data was deleted), delete cached data and render 404 page.
                 Cache::forget($cacheKey);
                 return view('404');
-            } elseif (
-                $this->hasDataChanged($pageData, $newPageData)
-            ) {
-                $cachedData = ['data' => $newPageData, 'timestamp' => $currentTime];
-                Cache::put($cacheKey, $cachedData, $duration);
+            } elseif ($this->hasDataChanged($pageData, $newPageData)) {
+                $this->storeInCache($cacheKey, $newPageData, $currentTime, $duration);
                 $pageData = $newPageData;
             }
         }
 
-        if ($customDataName !== null) {
-            // If a custom data name is provided, we'll use that instead of the default 'pageData'
-            // so when we pass the data to the view, we can use the custom name instead of 'pageData'
-            $pageData = [$customDataName => $pageData];
-        } else {
-            $pageData = ['pageData' => $pageData];
-        }
+        $pageData = $this->preparePageData($pageData, $customDataName);
 
         return view($view, $pageData);
     }
 
+    private function storeInCache(string $cacheKey, array $data, int $timestamp, int $duration)
+    {
+        // Store data in cache with timestamp to check later if data has changed.
+        $cachedData = ['data' => $data, 'timestamp' => $timestamp];
+        Cache::put($cacheKey, $cachedData, $duration);
+    }
+
+    private function preparePageData(array $pageData, string $customDataName): array
+    {
+        // Wrap page data in an array with a custom name to pass to the view.
+        return [$customDataName => $pageData];
+    }
+
     private function hasDataChanged(array $oldData, array $newData): bool
     {
-        $serializedOldData = serialize($oldData);
-        $serializedNewData = serialize($newData);
+        // when serializing an array, the order of the elements is can result in different output.
+        // so we sort the arrays before serializing them to get the same output if the data is the same.
+        ksort($oldData);
+        ksort($newData);
 
-        return $serializedOldData !== $serializedNewData;
+        return md5(serialize($oldData)) !== md5(serialize($newData));
+    }
+
+    private function argsValid(string $param, callable $dataCallback, int $duration, string $view, string $customDataName): bool
+    {
+        return $param  !== '' && $duration > 0 && $view !== '' && $customDataName !== '' && is_callable($dataCallback);
     }
 }
