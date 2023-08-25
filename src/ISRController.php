@@ -3,6 +3,7 @@
 namespace Tahamed\LaravelIsr;
 
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Contracts\View\View;
 
 class ISRController
 {
@@ -16,7 +17,7 @@ class ISRController
      * @param string   $customDataName Custom name for data passed to the view.
      * @return \Illuminate\Contracts\View\View
      */
-    public function getData(string $param, callable $dataCallback, int $duration, string $view, string $customDataName)
+    public function getPageData(string $param, callable $dataCallback, int $duration, string $view, string $customDataName): View
     {
         if (!$this->argsValid($param, $dataCallback, $duration, $view, $customDataName)) {
             throw new \InvalidArgumentException('Invalid arguments passed to getData() method.');
