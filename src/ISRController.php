@@ -15,7 +15,7 @@ class ISRController
      * @param int      $duration      Cache duration in seconds.
      * @param string   $view          The view to render.
      * @param string   $customDataName Custom name for data passed to the view.
-     * @return \Illuminate\Contracts\View\View
+     * @return view\Illuminate\Contracts\View\View 
      */
     public function getPageData(string $param, callable $dataCallback, int $duration, string $view, string $customDataName): View
     {
